@@ -1,0 +1,719 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dutch Comprehensive Mortgage & Housing Cost Calculator (Amsterdam)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: {
+                            800: '#0f172a',
+                            900: '#020617',
+                        },
+                        emerald: {
+                            500: '#10b981',
+                            600: '#059669',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .tooltip-box {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+        }
+        .has-tooltip:hover .tooltip-box {
+            visibility: visible;
+            opacity: 1;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen pb-12">
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-slate-900 text-lg shadow-md">
+                    €
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">Dutch Housing & Mortgage Cost Calculator</h1>
+                    <p class="text-xs text-slate-400">Amsterdam Real Estate & Tax Benefit Estimator</p>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+                <i class="fa-solid fa-circle-info text-emerald-400"></i>
+                <span>Updated for 2026 Dutch Tax Rates (37.56% Max Aftrek)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                        <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-emerald-600"></i> Mortgage & Property Inputs
+                        </h2>
+                        <button id="resetBtn" class="text-xs text-slate-500 hover:text-slate-800 transition flex items-center gap-1 font-medium">
+                            <i class="fa-solid fa-rotate-left"></i> Reset Defaults
+                        </button>
+                    </div>
+
+                    <form id="calculatorForm" class="space-y-4">
+                        <!-- Mortgage Type Switcher -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Mortgage Type</label>
+                            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                <button type="button" id="btnAnnuity" class="py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-slate-900 transition">Annuity (Annuïteit)</button>
+                                <button type="button" id="btnLinear" class="py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">Linear (Lineair)</button>
+                            </div>
+                            <input type="hidden" id="mortgageType" value="annuity">
+                        </div>
+
+                        <!-- Loan Amount -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="mortgageAmount" class="text-xs font-semibold text-slate-700">Mortgage Amount (€)</label>
+                                <span id="mortgageAmountVal" class="text-sm font-bold text-slate-900">€600,000</span>
+                            </div>
+                            <input type="range" id="mortgageAmountSlider" min="100000" max="1500000" step="10000" value="600000" class="w-full accent-emerald-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="mt-1 flex gap-2">
+                                <span class="text-slate-400 text-xs my-auto">€</span>
+                                <input type="number" id="mortgageAmount" value="600000" step="5000" class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Interest Rate & Duration -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="interestRate" class="block text-xs font-semibold text-slate-700 mb-1">Interest Rate (%)</label>
+                                <div class="relative">
+                                    <input type="number" id="interestRate" value="4.5" step="0.1" min="0.1" max="12" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                    <span class="absolute right-3 top-2.5 text-xs text-slate-400">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="loanTerm" class="block text-xs font-semibold text-slate-700 mb-1">Duration (Years)</label>
+                                <select id="loanTerm" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white font-medium">
+                                    <option value="10">10 Years</option>
+                                    <option value="15">15 Years</option>
+                                    <option value="20">20 Years</option>
+                                    <option value="25">25 Years</option>
+                                    <option value="30" selected>30 Years</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="border-slate-100 my-4">
+
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tax & WOZ Settings</h3>
+
+                        <!-- WOZ Value -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label for="wozValue" class="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                                    WOZ Property Value (€)
+                                    <span class="has-tooltip relative cursor-pointer text-slate-400 hover:text-slate-600">
+                                        <i class="fa-solid fa-circle-question"></i>
+                                        <div class="tooltip-box absolute left-1/2 -translate-x-1/2 bottom-6 w-60 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-20 pointer-events-none font-normal leading-normal">
+                                            WOZ (Waardering Onroerende Zaken) is used to calculate the <em>Eigenwoningforfait</em> tax addition.
+                                        </div>
+                                    </span>
+                                </label>
+                            </div>
+                            <input type="number" id="wozValue" value="600000" step="5000" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Tax Deduction Rate -->
+                            <div>
+                                <label for="taxRate" class="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                                    Tax Relief Rate
+                                    <span class="has-tooltip relative cursor-pointer text-slate-400 hover:text-slate-600">
+                                        <i class="fa-solid fa-circle-question"></i>
+                                        <div class="tooltip-box absolute left-0 bottom-6 w-56 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-20 pointer-events-none font-normal leading-normal">
+                                            Max mortgage interest deduction rate (Hypotheekrenteaftrek).
+                                        </div>
+                                    </span>
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="taxRate" value="37.56" step="0.01" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                    <span class="absolute right-3 top-2.5 text-xs text-slate-400">%</span>
+                                </div>
+                            </div>
+
+                            <!-- Eigenwoningforfait Rate -->
+                            <div>
+                                <label for="ewfRate" class="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                                    Eigenwoningforfait
+                                    <span class="has-tooltip relative cursor-pointer text-slate-400 hover:text-slate-600">
+                                        <i class="fa-solid fa-circle-question"></i>
+                                        <div class="tooltip-box absolute right-0 bottom-6 w-60 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-20 pointer-events-none font-normal leading-normal">
+                                            Deemed income addition percentage for home ownership (0.35% default).
+                                        </div>
+                                    </span>
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="ewfRate" value="0.35" step="0.01" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                    <span class="absolute right-3 top-2.5 text-xs text-slate-400">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="border-slate-100 my-4">
+
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Monthly Property & Living Expenses</h3>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Parking Fee -->
+                            <div>
+                                <label for="parkingCost" class="block text-xs font-semibold text-slate-700 mb-1">
+                                    <i class="fa-solid fa-square-parking text-slate-500 mr-1"></i> Parking (€/mo)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-xs text-slate-400">€</span>
+                                    <input type="number" id="parkingCost" value="150" step="10" class="w-full text-xs pl-7 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                </div>
+                            </div>
+
+                            <!-- Ground Lease / Erfpacht -->
+                            <div>
+                                <label for="erfpachtCost" class="block text-xs font-semibold text-slate-700 mb-1">
+                                    <i class="fa-solid fa-file-contract text-slate-500 mr-1"></i> Erfpacht / Lease (€/mo)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-xs text-slate-400">€</span>
+                                    <input type="number" id="erfpachtCost" value="100" step="10" class="w-full text-xs pl-7 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                </div>
+                            </div>
+
+                            <!-- VvE Contribution -->
+                            <div>
+                                <label for="vveCost" class="block text-xs font-semibold text-slate-700 mb-1">
+                                    <i class="fa-solid fa-building text-slate-500 mr-1"></i> VvE Contribution (€/mo)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-xs text-slate-400">€</span>
+                                    <input type="number" id="vveCost" value="200" step="10" class="w-full text-xs pl-7 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                </div>
+                            </div>
+
+                            <!-- Utilities Cost -->
+                            <div>
+                                <label for="utilitiesCost" class="block text-xs font-semibold text-slate-700 mb-1">
+                                    <i class="fa-solid fa-bolt text-slate-500 mr-1"></i> Utilities (€/mo)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-xs text-slate-400">€</span>
+                                    <input type="number" id="utilitiesCost" value="250" step="10" class="w-full text-xs pl-7 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-slate-900 text-slate-300 p-5 rounded-2xl shadow-sm space-y-3 text-xs">
+                    <h3 class="font-bold text-white flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-calculator text-amber-400"></i> Total Net Monthly Formula
+                    </h3>
+                    <p class="leading-relaxed">
+                        <strong class="text-white">Net Housing Outflow:</strong> Net Mortgage + Ongoing HOA (VvE), Ground Lease (Erfpacht), Parking, & Utility Costs.
+                    </p>
+                    <div class="p-3 bg-slate-800 rounded-lg border border-slate-700 text-slate-300 text-[11px] leading-relaxed">
+                        <strong>Non-Mortgage Living Overhead:</strong><br>
+                        €150 (Parking) + €100 (Lease) + €200 (VvE) + €250 (Utilities) = <span class="text-emerald-400 font-bold">€700 / month</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- 4 Summary Stat Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Gross Mortgage -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Gross Mortgage</span>
+                        <div id="grossMonthlyDisplay" class="text-lg md:text-xl font-extrabold text-slate-900">€0</div>
+                        <span class="text-[10px] text-slate-400 block mt-1">Bank Payment</span>
+                    </div>
+
+                    <!-- Net Mortgage -->
+                    <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 shadow-sm">
+                        <span class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block mb-1">Net Mortgage</span>
+                        <div id="netMortgageDisplay" class="text-lg md:text-xl font-extrabold text-emerald-700">€0</div>
+                        <span id="taxBenefitSubtext" class="text-[10px] text-emerald-600 block mt-1">After tax refund</span>
+                    </div>
+
+                    <!-- Non-Mortgage Living Costs -->
+                    <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+                        <span class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block mb-1">Other Costs</span>
+                        <div id="otherCostsDisplay" class="text-lg md:text-xl font-extrabold text-amber-700">€700</div>
+                        <span class="text-[10px] text-amber-600 block mt-1">VvE, Lease, Utils, Park</span>
+                    </div>
+
+                    <!-- Total Monthly Effective Cost -->
+                    <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md">
+                        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Total Effective Cost</span>
+                        <div id="totalMonthlyDisplay" class="text-lg md:text-xl font-extrabold text-emerald-400">€0</div>
+                        <span class="text-[10px] text-slate-400 block mt-1">Total Net Monthly</span>
+                    </div>
+                </div>
+
+                <!-- Secondary Summary Stats Bar -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div>
+                        <span class="text-[11px] text-slate-500 block">Monthly Tax Refund</span>
+                        <span id="taxRefundDisplay" class="text-sm font-bold text-emerald-600">+€0</span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block">Total Interest (30 yrs)</span>
+                        <span id="totalInterestDisplay" class="text-sm font-bold text-slate-900">€0</span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block">Total Tax Refunded</span>
+                        <span id="totalTaxBenefitDisplay" class="text-sm font-bold text-emerald-600">€0</span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-500 block">Yr 30 Total Net Cost</span>
+                        <span id="year30TotalDisplay" class="text-sm font-bold text-slate-900">€0</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Chart Box -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Monthly Cost Trajectory Over 30 Years</h3>
+                            <p class="text-xs text-slate-500">Gross vs Net Mortgage vs Total Net Out-of-Pocket Cost (including expenses)</p>
+                        </div>
+                    </div>
+                    <div class="relative w-full h-72">
+                        <canvas id="amortizationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                        <h3 class="text-base font-bold text-slate-900">Full Payment Schedule</h3>
+                        <div class="flex items-center bg-slate-100 p-1 rounded-lg">
+                            <button id="viewYearly" class="px-3 py-1 text-xs font-semibold rounded-md bg-white shadow-sm text-slate-900">Yearly</button>
+                            <button id="viewMonthly" class="px-3 py-1 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900">Monthly (First 2 Yrs)</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold sticky top-0 border-b border-slate-200 z-10">
+                                <tr>
+                                    <th id="thPeriod" class="py-3 px-4">Year</th>
+                                    <th class="py-3 px-4">Gross Mort. (€)</th>
+                                    <th class="py-3 px-4 text-emerald-600">Tax Refund (€)</th>
+                                    <th class="py-3 px-4">Net Mort. (€)</th>
+                                    <th class="py-3 px-4 text-amber-600">Other Expenses (€)</th>
+                                    <th class="py-3 px-4 text-slate-900 font-bold">Total Net Outflow (€)</th>
+                                    <th class="py-3 px-4">Remaining Bal. (€)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTableBody" class="divide-y divide-slate-100 font-medium">
+                                <!-- Dynamic rows inserted by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let amortizationChart = null;
+        let scheduleViewMode = 'yearly';
+
+        // Input Elements
+        const mortgageAmountInput = document.getElementById('mortgageAmount');
+        const mortgageAmountSlider = document.getElementById('mortgageAmountSlider');
+        const mortgageAmountVal = document.getElementById('mortgageAmountVal');
+        const interestRateInput = document.getElementById('interestRate');
+        const loanTermSelect = document.getElementById('loanTerm');
+        const wozValueInput = document.getElementById('wozValue');
+        const taxRateInput = document.getElementById('taxRate');
+        const ewfRateInput = document.getElementById('ewfRate');
+        const mortgageTypeInput = document.getElementById('mortgageType');
+
+        // New Expense Inputs
+        const parkingCostInput = document.getElementById('parkingCost');
+        const erfpachtCostInput = document.getElementById('erfpachtCost');
+        const vveCostInput = document.getElementById('vveCost');
+        const utilitiesCostInput = document.getElementById('utilitiesCost');
+
+        // Action Buttons
+        const btnAnnuity = document.getElementById('btnAnnuity');
+        const btnLinear = document.getElementById('btnLinear');
+        const resetBtn = document.getElementById('resetBtn');
+        const viewYearly = document.getElementById('viewYearly');
+        const viewMonthly = document.getElementById('viewMonthly');
+
+        // Format Currency Helper
+        function formatEUR(val, decimalPlaces = 0) {
+            return new Intl.NumberFormat('nl-NL', {
+                style: 'currency',
+                currency: 'EUR',
+                maximumFractionDigits: decimalPlaces,
+                minimumFractionDigits: decimalPlaces
+            }).format(val);
+        }
+
+        // Toggle Mortgage Type
+        btnAnnuity.addEventListener('click', () => {
+            mortgageTypeInput.value = 'annuity';
+            btnAnnuity.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-slate-900 transition";
+            btnLinear.className = "py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+            calculateHousingCosts();
+        });
+
+        btnLinear.addEventListener('click', () => {
+            mortgageTypeInput.value = 'linear';
+            btnLinear.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-slate-900 transition";
+            btnAnnuity.className = "py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+            calculateHousingCosts();
+        });
+
+        // Toggle Schedule View Mode
+        viewYearly.addEventListener('click', () => {
+            scheduleViewMode = 'yearly';
+            viewYearly.className = "px-3 py-1 text-xs font-semibold rounded-md bg-white shadow-sm text-slate-900";
+            viewMonthly.className = "px-3 py-1 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900";
+            document.getElementById('thPeriod').innerText = "Year";
+            calculateHousingCosts();
+        });
+
+        viewMonthly.addEventListener('click', () => {
+            scheduleViewMode = 'monthly';
+            viewMonthly.className = "px-3 py-1 text-xs font-semibold rounded-md bg-white shadow-sm text-slate-900";
+            viewYearly.className = "px-3 py-1 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-900";
+            document.getElementById('thPeriod').innerText = "Month";
+            calculateHousingCosts();
+        });
+
+        // Sync Slider & Text Inputs
+        mortgageAmountSlider.addEventListener('input', (e) => {
+            mortgageAmountInput.value = e.target.value;
+            mortgageAmountVal.innerText = formatEUR(e.target.value);
+            calculateHousingCosts();
+        });
+
+        mortgageAmountInput.addEventListener('input', (e) => {
+            mortgageAmountSlider.value = e.target.value;
+            mortgageAmountVal.innerText = formatEUR(e.target.value);
+            calculateHousingCosts();
+        });
+
+        // Bind all interactive input elements
+        [
+            interestRateInput, loanTermSelect, wozValueInput, taxRateInput, ewfRateInput,
+            parkingCostInput, erfpachtCostInput, vveCostInput, utilitiesCostInput
+        ].forEach(element => {
+            element.addEventListener('input', calculateHousingCosts);
+        });
+
+        // Reset to default values
+        resetBtn.addEventListener('click', () => {
+            mortgageAmountInput.value = 600000;
+            mortgageAmountSlider.value = 600000;
+            mortgageAmountVal.innerText = "€600,000";
+            interestRateInput.value = 4.5;
+            loanTermSelect.value = 30;
+            wozValueInput.value = 600000;
+            taxRateInput.value = 37.56;
+            ewfRateInput.value = 0.35;
+            
+            parkingCostInput.value = 150;
+            erfpachtCostInput.value = 100;
+            vveCostInput.value = 200;
+            utilitiesCostInput.value = 250;
+
+            mortgageTypeInput.value = 'annuity';
+            btnAnnuity.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-slate-900 transition";
+            btnLinear.className = "py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+
+            calculateHousingCosts();
+        });
+
+        // Main Calculation Logic
+        function calculateHousingCosts() {
+            // Mortgage Parameters
+            const P = parseFloat(mortgageAmountInput.value) || 0;
+            const annualRate = (parseFloat(interestRateInput.value) || 0) / 100;
+            const monthlyRate = annualRate / 12;
+            const years = parseInt(loanTermSelect.value) || 30;
+            const totalMonths = years * 12;
+            const woz = parseFloat(wozValueInput.value) || 0;
+            const taxBracketRate = (parseFloat(taxRateInput.value) || 0) / 100;
+            const ewfPct = (parseFloat(ewfRateInput.value) || 0) / 100;
+            const isAnnuity = mortgageTypeInput.value === 'annuity';
+
+            // Additional Ongoing Monthly Living Expenses
+            const parking = parseFloat(parkingCostInput.value) || 0;
+            const erfpacht = parseFloat(erfpachtCostInput.value) || 0;
+            const vve = parseFloat(vveCostInput.value) || 0;
+            const utilities = parseFloat(utilitiesCostInput.value) || 0;
+            const totalOtherExpensesMonthly = parking + erfpacht + vve + utilities;
+
+            // Imputed rental tax addition (Eigenwoningforfait)
+            const annualEWF = woz * ewfPct;
+            const monthlyEWF = annualEWF / 12;
+
+            let monthlyPaymentAnnuity = 0;
+            if (isAnnuity && monthlyRate > 0) {
+                monthlyPaymentAnnuity = P * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
+            }
+
+            const fixedLinearPrincipal = P / totalMonths;
+
+            let balance = P;
+            let monthlyData = [];
+            let yearlyData = [];
+
+            let cumInterest = 0;
+            let cumTaxBenefit = 0;
+
+            let currentYearInterest = 0;
+            let currentYearPrincipal = 0;
+            let currentYearGross = 0;
+            let currentYearTaxRefund = 0;
+            let currentYearNetMortgage = 0;
+
+            for (let m = 1; m <= totalMonths; m++) {
+                let interest = balance * monthlyRate;
+                let principal = isAnnuity ? (monthlyPaymentAnnuity - interest) : fixedLinearPrincipal;
+                let grossMortgage = principal + interest;
+
+                // Mortgage interest deduction minus monthly EWF
+                let taxableDeduction = Math.max(0, interest - monthlyEWF);
+                let monthlyTaxBenefit = taxableDeduction * taxBracketRate;
+                let netMortgage = grossMortgage - monthlyTaxBenefit;
+                let totalNetMonthly = netMortgage + totalOtherExpensesMonthly;
+
+                balance -= principal;
+                if (balance < 0) balance = 0;
+
+                cumInterest += interest;
+                cumTaxBenefit += monthlyTaxBenefit;
+
+                monthlyData.push({
+                    month: m,
+                    principal: principal,
+                    interest: interest,
+                    gross: grossMortgage,
+                    taxBenefit: monthlyTaxBenefit,
+                    netMortgage: netMortgage,
+                    otherExpenses: totalOtherExpensesMonthly,
+                    totalNetOutflow: totalNetMonthly,
+                    remaining: balance
+                });
+
+                currentYearInterest += interest;
+                currentYearPrincipal += principal;
+                currentYearGross += grossMortgage;
+                currentYearTaxRefund += monthlyTaxBenefit;
+                currentYearNetMortgage += netMortgage;
+
+                // End of year aggregation
+                if (m % 12 === 0 || m === totalMonths) {
+                    const yearNum = Math.ceil(m / 12);
+                    yearlyData.push({
+                        year: yearNum,
+                        principal: currentYearPrincipal,
+                        interest: currentYearInterest,
+                        gross: currentYearGross,
+                        taxBenefit: currentYearTaxRefund,
+                        netMortgage: currentYearNetMortgage,
+                        otherExpenses: totalOtherExpensesMonthly * 12,
+                        totalNetOutflow: currentYearNetMortgage + (totalOtherExpensesMonthly * 12),
+                        remaining: balance
+                    });
+
+                    currentYearInterest = 0;
+                    currentYearPrincipal = 0;
+                    currentYearGross = 0;
+                    currentYearTaxRefund = 0;
+                    currentYearNetMortgage = 0;
+                }
+            }
+
+            // Month 1 figures for summary displays
+            const m1 = monthlyData[0] || { gross: 0, taxBenefit: 0, netMortgage: 0, totalNetOutflow: 0 };
+            const mEnd = monthlyData[totalMonths - 1] || { totalNetOutflow: 0 };
+
+            document.getElementById('grossMonthlyDisplay').innerText = formatEUR(m1.gross, 2);
+            document.getElementById('netMortgageDisplay').innerText = formatEUR(m1.netMortgage, 2);
+            document.getElementById('otherCostsDisplay').innerText = formatEUR(totalOtherExpensesMonthly, 0);
+            document.getElementById('totalMonthlyDisplay').innerText = formatEUR(m1.totalNetOutflow, 2);
+
+            document.getElementById('taxRefundDisplay').innerText = `+${formatEUR(m1.taxBenefit, 2)}`;
+            document.getElementById('taxBenefitSubtext').innerText = `Deduction: -${formatEUR(m1.taxBenefit, 0)}/mo`;
+
+            document.getElementById('totalInterestDisplay').innerText = formatEUR(cumInterest);
+            document.getElementById('totalTaxBenefitDisplay').innerText = formatEUR(cumTaxBenefit);
+            document.getElementById('year30TotalDisplay').innerText = formatEUR(mEnd.totalNetOutflow, 2) + " /mo";
+
+            updateChart(yearlyData, totalOtherExpensesMonthly);
+            updateTable(scheduleViewMode === 'yearly' ? yearlyData : monthlyData.slice(0, 24));
+        }
+
+        function updateChart(yearlyData, otherExpensesMonthly) {
+            const ctx = document.getElementById('amortizationChart').getContext('2d');
+
+            const labels = yearlyData.map(d => `Yr ${d.year}`);
+            const netMortgageMonthly = yearlyData.map(d => d.netMortgage / 12);
+            const totalNetMonthly = yearlyData.map(d => d.totalNetOutflow / 12);
+            const grossMortgageMonthly = yearlyData.map(d => d.gross / 12);
+
+            if (amortizationChart) {
+                amortizationChart.destroy();
+            }
+
+            amortizationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Total Net Cost (Mortgage + Expenses)',
+                            data: totalNetMonthly,
+                            borderColor: '#10b981', // Emerald
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'Gross Bank Mortgage',
+                            data: grossMortgageMonthly,
+                            borderColor: '#94a3b8', // Slate grey
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Net Mortgage (Excl. Living Costs)',
+                            data: netMortgageMonthly,
+                            borderColor: '#0f172a', // Navy
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: { family: 'Inter', size: 11 },
+                                boxWidth: 12,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatEUR(context.raw, 2)}/mo`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 10 } }
+                        },
+                        y: {
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                font: { family: 'Inter', size: 10 },
+                                callback: function(value) { return '€' + value; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Populate Table Rows
+        function updateTable(data) {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach((row) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+
+                const isMonthly = 'month' in row;
+                const periodLabel = isMonthly ? `Month ${row.month}` : `Year ${row.year}`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-4 font-semibold text-slate-800">${periodLabel}</td>
+                    <td class="py-2.5 px-4">${formatEUR(row.gross)}</td>
+                    <td class="py-2.5 px-4 text-emerald-600 font-semibold">+${formatEUR(row.taxBenefit)}</td>
+                    <td class="py-2.5 px-4">${formatEUR(row.netMortgage)}</td>
+                    <td class="py-2.5 px-4 text-amber-600 font-medium">${formatEUR(row.otherExpenses)}</td>
+                    <td class="py-2.5 px-4 font-extrabold text-slate-900">${formatEUR(row.totalNetOutflow)}</td>
+                    <td class="py-2.5 px-4 text-slate-400">${formatEUR(row.remaining)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Initial Calculation on window load
+        window.onload = function() {
+            calculateHousingCosts();
+        };
+    </script>
+</body>
+</html>
